@@ -1,0 +1,159 @@
+THE OPEN TRADE PROJECT
+Modeling Value and Uncertainty in NFL Draft Trades
+Open-source data for the MIT Sloan Sports Analytics Conference Research Papers
+competition (Football track).
+
+--------------------------------------------------------------------------------
+WHAT THIS IS
+--------------------------------------------------------------------------------
+
+Traditional NFL draft value charts assign a single number to each selection, so
+every trade resolves into a winner and a loser. This project treats a pick's value
+as a distribution instead of a point: it takes a published chart as the prior mean
+for each pick and estimates, from historical trades, how far realized trade values
+spread around that mean.
+
+The five files here are the data behind that analysis: the trade records, the two
+charts used as priors, the per-pick deviations recovered from each trade, and the
+per-pick error comparison between the two charts.
+
+All data is derived from publicly available NFL draft trade records.
+
+--------------------------------------------------------------------------------
+CONVENTIONS THAT APPLY TO EVERY FILE
+--------------------------------------------------------------------------------
+
+Pick numbering
+  Picks are numbered continuously from 1 to 261 across the entire draft, with no
+  round boundaries. The last pick of round one is 32 and the first pick of round
+  two is 33. This keeps numbering consistent across years, since the number of
+  compensatory picks varies from draft to draft.
+
+Compensatory picks
+  Treated as regular picks, including Resolution JC-2A selections.
+
+Forfeited picks
+  Retained as "ghost" selections so that later pick numbers do not shift. For
+  example, Miami forfeited its 2023 first-round pick (20); pick 21 remains 21
+  rather than moving up to 20.
+
+What is excluded
+  Trades involving players, and trades involving future draft picks. The dataset
+  consists exclusively of pick-for-pick swaps within a single draft.
+
+What is not modeled
+  Player evaluation and post-draft player outcomes. Only the valuation of picks
+  and trades is analyzed.
+
+--------------------------------------------------------------------------------
+FILES
+--------------------------------------------------------------------------------
+
+1. all_trades_2002_2025.xlsx
+   The trade records (three sheets)
+
+   Sheet "standard"  -- THE DATASET USED IN THE PAPER
+     477 trades, 2002 through 2025, pick-for-pick only. Columns:
+       Year              draft year
+       Team 1            first team in the transaction
+       Pick(s) traded    picks RECEIVED by Team 1
+       Team 2            second team in the transaction
+       Pick(s) traded2   picks RECEIVED by Team 2
+       Pre-draft?        D  = executed during the draft
+                         PD = executed before the draft began
+
+     The analysis in the paper uses the 2012-2025 subset: 318 trades, chosen
+     because the Rich Hill chart was built to reflect the 2011 CBA and a
+     comparison against Jimmy Johnson is only fair over the post-CBA period.
+
+     Note on direction: both pick columns list what each team transacts. A pick in
+     the "Team 1" column was sent by Team 1, and vice versa.
+
+     Relocated franchises appear in combined form, e.g.
+     OAK/LAV for Oakland / Las Vegas.
+
+2. JJ_RH_trade_charts.xlsx
+   The two charts used as prior means, side by side. Sheet "Trade charts".
+     Pick number           1 to 261
+     Jimmy Johnson value   the 1990s chart, maximum 3,000 at pick 1
+     Rich Hill value       the 2017 chart, maximum 1,000 at pick 1
+
+   IMPORTANT: the two columns are different arbitrary currencies. They must not
+   be differenced, ratioed, or compared directly. Comparing the charts requires
+   a scale-invariant metric, which is why the file in item 5 reports a RELATIVE
+   error rather than an absolute one.
+
+3. Observations_JJ_2012_2025.xlsx
+4. Observations_RH_2012_2025.xlsx
+   The per-pick deviations recovered from the trades - item 3 using the Jimmy
+   Johnson chart as the prior, item 4 using Rich Hill. Each file has 15 sheets, one per year.
+
+     Sheet "Combined"   all 1,101 observations, columns Year / Pick / Deviation
+     Sheets "2012".."2025"   the same data split by draft year, Pick / Deviation
+
+   A deviation is the difference between a pick's realized transacted value in
+   one trade and its prior value from the chart, expressed in that chart's own
+   points. Positive means the pick transacted above its chart value.
+
+   These deviations are MODEL-IMPLIED, not directly observed. They are recovered
+   by solving the trade parity model, which assumes each trade exchanges equal
+   true value and distributes the discrepancy across the picks involved in
+   proportion to their prior values. They should be read as a measure of how
+   consistent a chart is with observed trade behavior, not as a direct
+   measurement of what a pick is worth.
+
+   Both files contain 1,101 observations covering 252 distinct picks. Nine picks
+   appear in no qualifying trade over 2012-2025: 1, 2, 19, 177, 223, 253, 254,
+   258 and 260. The two files have identical row counts by year because they
+   describe the same trades under two different priors.
+
+5. JJ_RH_RMSE.xlsx
+   Per-pick relative root mean square error for both charts, over 2012-2025.
+   Sheet "JJ_RH_comp".
+     Pick Number
+     RRMSE (Jimmy Johnson)
+     RRMSE (Rich Hill)
+
+   For pick j, RRMSE is the root mean of the squared relative deviations for
+   that pick:
+
+     RRMSE_j = sqrt( (1/n_j) * SUM_i ( (y_ij - mu_j) / mu_j )^2 )
+
+   where n_j is the number of observations for pick j, y_ij is the transacted
+   value in observation i, and mu_j is the chart's prior value. Normalizing by
+   mu_j makes the measure dimensionless, which is what allows the two charts to
+   be compared despite their different scales.
+
+   Lower is better. The Rich Hill chart has the smaller RRMSE on 176 of the 252
+   picks that have observations. Both charts fit late-round picks least well.
+
+   The nine picks with no observations show #NUM! rather than a value.
+
+--------------------------------------------------------------------------------
+REPRODUCING THE PIPELINE
+--------------------------------------------------------------------------------
+
+The order of operations is:
+
+  1. Take the 2012-2025 pick-for-pick trades from all_trades_2002_2025.xlsx,
+     sheet "standard".
+  2. Assign each pick its prior value from JJ_RH_trade_charts.xlsx.
+  3. Solve the trade parity model for each trade to recover a deviation for
+     every pick involved. This reproduces items 3 and 4.
+  4. Aggregate the deviations by pick and normalize by the prior value. This
+     reproduces item 5.
+
+The MATLAB implementation of steps 3 and 4, and of the kernel-regression
+uncertainty estimation that follows, is complete and will be released at the
+appropriate stage of the submission.
+
+--------------------------------------------------------------------------------
+DISCLAIMER
+--------------------------------------------------------------------------------
+
+This is independent academic research. It is not affiliated with, endorsed by, or
+sponsored by the National Football League or any of its member clubs. Team names,
+trademarks and draft references are used solely for descriptive and scholarly
+purposes. The analysis is based entirely on publicly available information and
+should not be read as representing the views, strategies or internal valuation
+models of any NFL organization.
